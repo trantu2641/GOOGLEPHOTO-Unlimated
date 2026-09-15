@@ -1,4 +1,4 @@
-name: Build Pixel1Photos RootHide
+name: Build TrollFools Dylib
 
 on:
   workflow_dispatch:
@@ -21,38 +21,49 @@ jobs:
             git \
             wget \
             xz-utils \
-            ldid \
-            dpkg
+            ldid
 
       - name: Install Theos
         run: |
           git clone --recursive \
             https://github.com/theos/theos.git \
-            $HOME/theos
+            "$HOME/theos"
 
-      - name: Install SDK
+      - name: Download iOS 16.5 SDK
         run: |
-          mkdir -p $HOME/theos/sdks
+          mkdir -p "$HOME/theos/sdks"
 
           wget -q \
             https://github.com/theos/sdks/releases/download/16.5/iPhoneOS16.5.sdk.tar.xz \
             -O /tmp/sdk.tar.xz
 
           tar -xf /tmp/sdk.tar.xz \
-            -C $HOME/theos/sdks
+            -C "$HOME/theos/sdks"
 
       - name: Build
         env:
           THEOS: ${{ github.workspace }}/../theos
         run: |
-          make package FINALPACKAGE=1
+          make clean
+          make FINALPACKAGE=1
 
-      - name: List packages
+      - name: Prepare TrollFools files
         run: |
-          find packages -type f -maxdepth 1 -print
+          mkdir -p output
 
-      - name: Upload artifact
+          find .theos \
+            -type f \
+            -name "Pixel1Photos.dylib" \
+            -exec cp {} output/ \;
+
+          cp Pixel1Photos.plist output/
+
+      - name: Check architecture
+        run: |
+          file output/Pixel1Photos.dylib
+
+      - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          name: Pixel1PhotosRootHide
-          path: packages/*.deb
+          name: Pixel1Photos-TrollFools
+          path: output/
