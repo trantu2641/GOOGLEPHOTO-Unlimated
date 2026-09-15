@@ -10,6 +10,9 @@ jobs:
   build:
     runs-on: ubuntu-22.04
 
+    env:
+      THEOS: /home/runner/theos
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -38,18 +41,22 @@ jobs:
         run: |
           set -e
 
+          rm -rf "$THEOS"
+
           git clone --recursive \
             https://github.com/theos/theos.git \
-            "$HOME/theos"
+            "$THEOS"
 
-          echo "===== THEOS ====="
-          ls -lah "$HOME/theos"
+          echo "===== THEOS INSTALLED ====="
+          echo "THEOS=$THEOS"
+
+          test -d "$THEOS"
+
+          ls -lah "$THEOS"
 
       - name: Install iOS Linux Toolchain
         run: |
           set -e
-
-          THEOS="$HOME/theos"
 
           mkdir -p "$THEOS/toolchain"
 
@@ -68,7 +75,8 @@ jobs:
             /tmp/iOSToolchain-x86_64.tar.xz \
             -C "$THEOS/toolchain"
 
-          echo "===== TOOLCHAIN ====="
+          echo
+          echo "===== TOOLCHAIN CONTENT ====="
 
           find "$THEOS/toolchain" \
             -maxdepth 4 \
@@ -79,8 +87,12 @@ jobs:
         run: |
           set -e
 
-          THEOS="$HOME/theos"
+          echo "===== THEOS ====="
+          echo "$THEOS"
 
+          test -d "$THEOS"
+
+          echo
           echo "===== TOOLCHAIN DIRECTORY ====="
 
           find "$THEOS/toolchain" \
@@ -99,8 +111,6 @@ jobs:
       - name: Download iOS 16.5 SDK
         run: |
           set -e
-
-          THEOS="$HOME/theos"
 
           mkdir -p "$THEOS/sdks"
 
@@ -124,16 +134,18 @@ jobs:
 
           ls -lah "$THEOS/sdks"
 
+          test -d "$THEOS/sdks/iPhoneOS16.5.sdk"
+
       - name: Verify Theos
-        env:
-          THEOS: ${{ github.workspace }}/../theos
         run: |
           set -e
 
+          echo "===== THEOS ====="
           echo "THEOS=$THEOS"
 
           test -d "$THEOS"
           test -d "$THEOS/sdks"
+          test -d "$THEOS/sdks/iPhoneOS16.5.sdk"
           test -d "$THEOS/toolchain/linux/iphone"
 
           echo
@@ -146,35 +158,39 @@ jobs:
 
           ls -lah "$THEOS/toolchain/linux/iphone/bin"
 
-      - name: Verify Project
+      - name: Verify Project Files
         run: |
           set -e
 
-          echo "===== PROJECT FILES ====="
+          echo "===== PROJECT ====="
 
+          pwd
           ls -lah
 
-          test -f Makefile
-          test -f Tweak.x
-          test -f Pixel1Photos.plist
-
           echo
-          echo "===== MAKEFILE ====="
+          echo "===== Makefile ====="
 
+          test -f Makefile
           cat Makefile
 
           echo
-          echo "===== PLIST ====="
+          echo "===== Tweak.x ====="
 
+          test -f Tweak.x
+          sed -n '1,240p' Tweak.x
+
+          echo
+          echo "===== Pixel1Photos.plist ====="
+
+          test -f Pixel1Photos.plist
           cat Pixel1Photos.plist
 
       - name: Build dylib
-        env:
-          THEOS: ${{ github.workspace }}/../theos
         run: |
           set -e
 
           echo "===== BUILD ====="
+          echo "THEOS=$THEOS"
 
           make clean || true
 
@@ -193,7 +209,7 @@ jobs:
             -name "*.dylib" \
             -print
 
-      - name: Prepare TrollFools files
+      - name: Prepare TrollFools Files
         run: |
           set -e
 
@@ -209,7 +225,7 @@ jobs:
             exit 1
           fi
 
-          echo "Found dylib:"
+          echo "Found:"
           echo "$DYLIB"
 
           cp "$DYLIB" \
@@ -218,7 +234,7 @@ jobs:
           cp Pixel1Photos.plist \
             output/Pixel1Photos.plist
 
-      - name: Verify Mach-O
+      - name: Verify Output
         run: |
           set -e
 
@@ -239,12 +255,12 @@ jobs:
             | head -100
 
           echo
-          echo "===== ARCH ====="
+          echo "===== ARCHITECTURE ====="
 
           llvm-objdump -f \
             output/Pixel1Photos.dylib
 
-      - name: Upload TrollFools dylib
+      - name: Upload TrollFools Files
         uses: actions/upload-artifact@v4
         with:
           name: Pixel1Photos-TrollFools
