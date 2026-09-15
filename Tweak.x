@@ -19,10 +19,10 @@ static void PXLog(NSString *format, ...)
 {
     @autoreleasepool
     {
-        PXLog(@"================================");
+        PXLog(@"========================================");
         PXLog(@"Pixel1Photos loaded");
         PXLog(@"Google Photos process injected");
-        PXLog(@"================================");
+        PXLog(@"========================================");
 
         UIDevice *device = UIDevice.currentDevice;
 
@@ -39,5 +39,18 @@ static void PXLog(NSString *format, ...)
             PXLog(@"sysname = %s", info.sysname);
             PXLog(@"release = %s", info.release);
         }
+
+        NSBundle *bundle = NSBundle.mainBundle;
+
+        PXLog(@"bundleIdentifier = %@",
+              bundle.bundleIdentifier);
+
+        PXLog(@"bundleVersion = %@",
+              [bundle objectForInfoDictionaryKey:@"CFBundleVersion"]);
+
+        PXLog(@"shortVersion = %@",
+              [bundle objectForInfoDictionaryKey:@"CFBundleShortVersionString"]);
+
+        PXLog(@"========================================");
     }
 }
