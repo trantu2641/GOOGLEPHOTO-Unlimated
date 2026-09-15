@@ -16,6 +16,8 @@ jobs:
 
       - name: Install dependencies
         run: |
+          set -e
+
           sudo apt-get update
 
           sudo apt-get install -y \
@@ -33,11 +35,26 @@ jobs:
 
       - name: Install Theos
         run: |
+          set -e
+
           git clone --recursive \
             https://github.com/theos/theos.git \
             "$HOME/theos"
 
-         - name: Download iOS 16.5 SDK
+          echo "Theos installed:"
+          ls -lah "$HOME/theos"
+
+      - name: Install iOS toolchain
+        run: |
+          set -e
+
+          cd "$HOME/theos"
+
+          echo "Installing Theos toolchain..."
+
+          "$HOME/theos/bin/install-llvm-toolchain"
+
+      - name: Download iOS 16.5 SDK
         run: |
           set -e
 
@@ -60,23 +77,67 @@ jobs:
 
           echo "Installed SDKs:"
           ls -lah "$HOME/theos/sdks"
+
       - name: Verify Theos
         env:
           THEOS: ${{ github.workspace }}/../theos
         run: |
+          set -e
+
+          echo "===== THEOS ====="
           echo "THEOS=$THEOS"
 
           test -d "$THEOS"
-          test -d "$THEOS/sdks"
 
-          echo "Available SDKs:"
+          echo
+          echo "===== THEOS DIRECTORY ====="
+          ls -lah "$THEOS"
+
+          echo
+          echo "===== SDKs ====="
           ls -lah "$THEOS/sdks"
+
+          echo
+          echo "===== TOOLCHAIN ====="
+
+          find "$THEOS/toolchain" \
+            -maxdepth 3 \
+            -type f \
+            | head -100
+
+      - name: Verify project files
+        run: |
+          set -e
+
+          echo "===== PROJECT ====="
+
+          ls -lah
+
+          echo
+          echo "===== Tweak.x ====="
+
+          test -f Tweak.x
+          sed -n '1,240p' Tweak.x
+
+          echo
+          echo "===== Makefile ====="
+
+          test -f Makefile
+          cat Makefile
+
+          echo
+          echo "===== Pixel1Photos.plist ====="
+
+          test -f Pixel1Photos.plist
+          cat Pixel1Photos.plist
 
       - name: Build dylib
         env:
           THEOS: ${{ github.workspace }}/../theos
         run: |
           set -e
+
+          echo "===== BUILD ====="
 
           make clean || true
 
@@ -86,7 +147,9 @@ jobs:
 
       - name: Find dylib
         run: |
-          echo "Searching for dylib..."
+          set -e
+
+          echo "===== DYLIB SEARCH ====="
 
           find .theos \
             -type f \
@@ -109,6 +172,9 @@ jobs:
             exit 1
           fi
 
+          echo "Found:"
+          echo "$DYLIB"
+
           cp "$DYLIB" \
             output/Pixel1Photos.dylib
 
@@ -117,6 +183,8 @@ jobs:
 
       - name: Verify output
         run: |
+          set -e
+
           echo "===== OUTPUT ====="
 
           ls -lah output/
@@ -127,14 +195,21 @@ jobs:
           file output/Pixel1Photos.dylib
 
           echo
-          echo "===== MACH-O ====="
+          echo "===== MACH-O HEADER ====="
 
           llvm-objdump -p \
             output/Pixel1Photos.dylib \
-            | head -80
+            | head -100
+
+          echo
+          echo "===== ARCHITECTURE ====="
+
+          llvm-objdump -f \
+            output/Pixel1Photos.dylib
 
       - name: Upload TrollFools dylib
         uses: actions/upload-artifact@v4
         with:
           name: Pixel1Photos-TrollFools
           path: output/
+          if-no-files-found: error
