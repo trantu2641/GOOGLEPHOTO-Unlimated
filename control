@@ -1,0 +1,9 @@
+Package: com.pixel1photos.roothide
+Name: Pixel1Photos RootHide
+Version: 0.1.0
+Architecture: iphoneos-arm64
+Description: Pixel 1 device-profile research tweak for Google Photos.
+Maintainer: Pixel1Photos
+Author: Pixel1Photos
+Section: Tweaks
+Depends: mobilesubstrate
