@@ -1,98 +1,83 @@
-#import <UIKit/UIKit.h>
 #import <Foundation/Foundation.h>
-#import <sys/sysctl.h>
+#import <UIKit/UIKit.h>
 #import <sys/utsname.h>
-#import <objc/runtime.h>
-
-#pragma mark - Configuration
-
-static BOOL PX1Enabled = YES;
-
-static NSString * const PX1Model = @"Pixel";
-static NSString * const PX1Device = @"sailfish";
-static NSString * const PX1Product = @"sailfish";
-static NSString * const PX1Brand = @"google";
-static NSString * const PX1Manufacturer = @"Google";
-
-#pragma mark - Logging
 
 static void PX1Log(NSString *format, ...)
 {
     va_list args;
     va_start(args, format);
 
-    NSString *message =
+    NSString *msg =
         [[NSString alloc] initWithFormat:format arguments:args];
 
     va_end(args);
 
-    NSLog(@"[Pixel1Photos] %@", message);
+    NSLog(@"[Pixel1Photos] %@", msg);
 }
-
-#pragma mark - UIDevice
 
 %hook UIDevice
 
 - (NSString *)model
 {
-    if (!PX1Enabled)
-        return %orig;
+    NSString *value = %orig;
 
-    PX1Log(@"UIDevice model -> %@", PX1Model);
+    PX1Log(@"UIDevice.model = %@", value);
 
-    return PX1Model;
+    return value;
 }
 
 - (NSString *)localizedModel
 {
-    if (!PX1Enabled)
-        return %orig;
+    NSString *value = %orig;
 
-    return PX1Model;
+    PX1Log(@"UIDevice.localizedModel = %@", value);
+
+    return value;
 }
 
-%end
-
-#pragma mark - Process information
-
-%hook NSProcessInfo
-
-- (NSDictionary *)environment
+- (NSString *)systemName
 {
-    NSDictionary *original = %orig;
+    NSString *value = %orig;
 
-    if (!PX1Enabled)
-        return original;
+    PX1Log(@"UIDevice.systemName = %@", value);
 
-    NSMutableDictionary *env =
-        [original mutableCopy];
+    return value;
+}
 
-    /*
-     * Research-only metadata.
-     *
-     * We intentionally do not overwrite arbitrary
-     * environment variables yet.
-     */
+- (NSString *)systemVersion
+{
+    NSString *value = %orig;
 
-    PX1Log(@"NSProcessInfo environment queried");
+    PX1Log(@"UIDevice.systemVersion = %@", value);
 
-    return env;
+    return value;
 }
 
 %end
 
-#pragma mark - Startup
 
 %ctor
 {
     @autoreleasepool
     {
-        PX1Log(@"================================");
-        PX1Log(@"Pixel1Photos RootHide loaded");
-        PX1Log(@"Target: Google Photos");
-        PX1Log(@"Profile: Google Pixel 1");
-        PX1Log(@"Device: %@", PX1Device);
-        PX1Log(@"Product: %@", PX1Product);
-        PX1Log(@"================================");
+        PX1Log(@"==============================");
+        PX1Log(@"Pixel1Photos loaded");
+        PX1Log(@"==============================");
+
+        UIDevice *device =
+            [UIDevice currentDevice];
+
+        PX1Log(@"Model: %@", device.model);
+        PX1Log(@"System: %@", device.systemName);
+        PX1Log(@"Version: %@", device.systemVersion);
+
+        struct utsname info;
+
+        if (uname(&info) == 0)
+        {
+            PX1Log(@"machine: %s", info.machine);
+            PX1Log(@"sysname: %s", info.sysname);
+            PX1Log(@"release: %s", info.release);
+        }
     }
 }
