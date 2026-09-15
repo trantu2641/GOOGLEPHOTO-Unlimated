@@ -2,7 +2,9 @@ name: Build Pixel1Photos TrollFools
 
 on:
   workflow_dispatch:
-
+  push:
+    branches:
+      - main
 
 jobs:
   build:
@@ -18,16 +20,16 @@ jobs:
 
           sudo apt-get install -y \
             clang \
+            llvm \
             make \
             perl \
             git \
-            wget \
             curl \
+            wget \
             xz-utils \
             bzip2 \
             unzip \
-            dpkg \
-            lldb
+            dpkg
 
       - name: Install Theos
         run: |
@@ -35,36 +37,64 @@ jobs:
             https://github.com/theos/theos.git \
             "$HOME/theos"
 
-      - name: Download iOS SDK
+      - name: Download SDK
         run: |
+          set -e
+
           mkdir -p "$HOME/theos/sdks"
 
-          wget -q \
-            https://github.com/theos/sdks/releases/download/16.5/iPhoneOS16.5.sdk.tar.xz \
-            -O /tmp/iPhoneOS16.5.sdk.tar.xz
+          echo "Downloading iPhoneOS SDK..."
 
-          tar -xf \
-            /tmp/iPhoneOS16.5.sdk.tar.xz \
+          curl -L \
+            --fail \
+            --retry 3 \
+            --retry-delay 2 \
+            "https://github.com/theos/sdks/releases/download/15.2/iPhoneOS15.2.sdk.tar.xz" \
+            -o /tmp/iPhoneOS.sdk.tar.xz
+
+          echo "Extracting SDK..."
+
+          tar -xJf \
+            /tmp/iPhoneOS.sdk.tar.xz \
             -C "$HOME/theos/sdks"
 
-      - name: Check SDK
-        run: |
-          echo "Installed SDKs:"
-          ls -lah "$HOME/theos/sdks"
+          echo "SDK contents:"
+          find "$HOME/theos/sdks" -maxdepth 2 -type d -print
 
-      - name: Build
+      - name: Verify Theos
         env:
           THEOS: ${{ github.workspace }}/../theos
         run: |
-          make clean
-          make FINALPACKAGE=1
+          echo "THEOS=$THEOS"
+
+          test -d "$THEOS"
+          test -d "$THEOS/sdks"
+
+          echo "Available SDKs:"
+          ls -lah "$THEOS/sdks"
+
+      - name: Build dylib
+        env:
+          THEOS: ${{ github.workspace }}/../theos
+        run: |
+          set -e
+
+          make clean || true
+
+          make \
+            FINALPACKAGE=1 \
+            THEOS="$THEOS"
 
       - name: Find dylib
         run: |
           echo "Searching for dylib..."
-          find .theos -type f -name "*.dylib" -print
 
-      - name: Prepare TrollFools package
+          find .theos \
+            -type f \
+            -name "*.dylib" \
+            -print
+
+      - name: Prepare TrollFools files
         run: |
           set -e
 
@@ -80,26 +110,31 @@ jobs:
             exit 1
           fi
 
-          cp "$DYLIB" output/Pixel1Photos.dylib
+          cp "$DYLIB" \
+            output/Pixel1Photos.dylib
 
-          cp Pixel1Photos.plist output/Pixel1Photos.plist
+          cp Pixel1Photos.plist \
+            output/Pixel1Photos.plist
 
-      - name: Check dylib
+      - name: Verify output
         run: |
-          echo "===== FILE ====="
+          echo "===== OUTPUT ====="
+
+          ls -lah output/
+
+          echo
+          echo "===== DYLIB ====="
+
           file output/Pixel1Photos.dylib
 
           echo
-          echo "===== ARCHITECTURE ====="
-          llvm-objdump -p output/Pixel1Photos.dylib \
-            | grep -E "architecture|platform|LC_BUILD_VERSION" \
-            || true
+          echo "===== MACH-O ====="
 
-          echo
-          echo "===== SIZE ====="
-          ls -lh output/Pixel1Photos.dylib
+          llvm-objdump -p \
+            output/Pixel1Photos.dylib \
+            | head -80
 
-      - name: Upload TrollFools files
+      - name: Upload TrollFools dylib
         uses: actions/upload-artifact@v4
         with:
           name: Pixel1Photos-TrollFools
