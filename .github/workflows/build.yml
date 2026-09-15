@@ -37,30 +37,29 @@ jobs:
             https://github.com/theos/theos.git \
             "$HOME/theos"
 
-      - name: Download SDK
+         - name: Download iOS 16.5 SDK
         run: |
           set -e
 
           mkdir -p "$HOME/theos/sdks"
 
-          echo "Downloading iPhoneOS SDK..."
+          echo "Downloading iPhoneOS 16.5 SDK..."
 
           curl -L \
             --fail \
             --retry 3 \
             --retry-delay 2 \
-            "https://github.com/theos/sdks/releases/download/15.2/iPhoneOS15.2.sdk.tar.xz" \
-            -o /tmp/iPhoneOS.sdk.tar.xz
+            "https://github.com/theos/sdks/releases/download/master-146e41f/iPhoneOS16.5.sdk.tar.xz" \
+            -o /tmp/iPhoneOS16.5.sdk.tar.xz
 
           echo "Extracting SDK..."
 
           tar -xJf \
-            /tmp/iPhoneOS.sdk.tar.xz \
+            /tmp/iPhoneOS16.5.sdk.tar.xz \
             -C "$HOME/theos/sdks"
 
-          echo "SDK contents:"
-          find "$HOME/theos/sdks" -maxdepth 2 -type d -print
-
+          echo "Installed SDKs:"
+          ls -lah "$HOME/theos/sdks"
       - name: Verify Theos
         env:
           THEOS: ${{ github.workspace }}/../theos
