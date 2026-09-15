@@ -2,10 +2,7 @@ name: Build Pixel1Photos TrollFools
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
-
+  
 jobs:
   build:
     runs-on: ubuntu-22.04
@@ -14,8 +11,18 @@ jobs:
       THEOS: /home/runner/theos
 
     steps:
+
+      # ==========================================
+      # CHECKOUT
+      # ==========================================
+
       - name: Checkout
         uses: actions/checkout@v4
+
+
+      # ==========================================
+      # DEPENDENCIES
+      # ==========================================
 
       - name: Install dependencies
         run: |
@@ -35,7 +42,14 @@ jobs:
             bzip2 \
             unzip \
             dpkg \
-            libtinfo6
+            libtinfo6 \
+            file \
+            xxd
+
+
+      # ==========================================
+      # THEOS
+      # ==========================================
 
       - name: Install Theos
         run: |
@@ -47,12 +61,21 @@ jobs:
             https://github.com/theos/theos.git \
             "$THEOS"
 
-          echo "===== THEOS INSTALLED ====="
+          echo
+          echo "=========================================="
+          echo "THEOS INSTALLED"
+          echo "=========================================="
+
           echo "THEOS=$THEOS"
 
           test -d "$THEOS"
 
           ls -lah "$THEOS"
+
+
+      # ==========================================
+      # IOS TOOLCHAIN
+      # ==========================================
 
       - name: Install iOS Linux Toolchain
         run: |
@@ -60,7 +83,10 @@ jobs:
 
           mkdir -p "$THEOS/toolchain"
 
-          echo "===== DOWNLOAD TOOLCHAIN ====="
+          echo
+          echo "=========================================="
+          echo "DOWNLOAD IOS TOOLCHAIN"
+          echo "=========================================="
 
           curl -L \
             --fail \
@@ -69,44 +95,65 @@ jobs:
             "https://github.com/L1ghtmann/llvm-project/releases/latest/download/iOSToolchain-x86_64.tar.xz" \
             -o /tmp/iOSToolchain-x86_64.tar.xz
 
-          echo "===== EXTRACT TOOLCHAIN ====="
+          echo
+          echo "=========================================="
+          echo "EXTRACT IOS TOOLCHAIN"
+          echo "=========================================="
 
           tar -xJf \
             /tmp/iOSToolchain-x86_64.tar.xz \
             -C "$THEOS/toolchain"
 
           echo
-          echo "===== TOOLCHAIN CONTENT ====="
+          echo "=========================================="
+          echo "TOOLCHAIN FILES"
+          echo "=========================================="
 
           find "$THEOS/toolchain" \
-            -maxdepth 4 \
+            -maxdepth 5 \
             -type f \
-            | head -100
+            | head -150
+
+
+      # ==========================================
+      # VERIFY TOOLCHAIN
+      # ==========================================
 
       - name: Verify Toolchain
         run: |
           set -e
 
-          echo "===== THEOS ====="
-          echo "$THEOS"
+          echo
+          echo "=========================================="
+          echo "VERIFY TOOLCHAIN"
+          echo "=========================================="
+
+          echo "THEOS=$THEOS"
 
           test -d "$THEOS"
 
-          echo
-          echo "===== TOOLCHAIN DIRECTORY ====="
+          test -d \
+            "$THEOS/toolchain/linux/iphone"
 
-          find "$THEOS/toolchain" \
-            -maxdepth 4 \
-            -type f \
-            | head -100
+          test -x \
+            "$THEOS/toolchain/linux/iphone/bin/clang"
 
           echo
-          echo "===== CLANG ====="
-
-          test -x "$THEOS/toolchain/linux/iphone/bin/clang"
+          echo "Clang:"
 
           "$THEOS/toolchain/linux/iphone/bin/clang" \
             --version
+
+          echo
+          echo "Toolchain bin directory:"
+
+          ls -lah \
+            "$THEOS/toolchain/linux/iphone/bin"
+
+
+      # ==========================================
+      # IOS SDK
+      # ==========================================
 
       - name: Download iOS 16.5 SDK
         run: |
@@ -114,7 +161,10 @@ jobs:
 
           mkdir -p "$THEOS/sdks"
 
-          echo "===== DOWNLOAD SDK ====="
+          echo
+          echo "=========================================="
+          echo "DOWNLOAD IPHONEOS 16.5 SDK"
+          echo "=========================================="
 
           curl -L \
             --fail \
@@ -123,73 +173,130 @@ jobs:
             "https://github.com/theos/sdks/releases/download/master-146e41f/iPhoneOS16.5.sdk.tar.xz" \
             -o /tmp/iPhoneOS16.5.sdk.tar.xz
 
-          echo "===== EXTRACT SDK ====="
+          echo
+          echo "=========================================="
+          echo "EXTRACT SDK"
+          echo "=========================================="
 
           tar -xJf \
             /tmp/iPhoneOS16.5.sdk.tar.xz \
             -C "$THEOS/sdks"
 
           echo
-          echo "===== SDKs ====="
+          echo "=========================================="
+          echo "INSTALLED SDKS"
+          echo "=========================================="
 
           ls -lah "$THEOS/sdks"
 
-          test -d "$THEOS/sdks/iPhoneOS16.5.sdk"
+          test -d \
+            "$THEOS/sdks/iPhoneOS16.5.sdk"
+
+
+      # ==========================================
+      # VERIFY THEOS
+      # ==========================================
 
       - name: Verify Theos
         run: |
           set -e
 
-          echo "===== THEOS ====="
+          echo
+          echo "=========================================="
+          echo "VERIFY THEOS"
+          echo "=========================================="
+
           echo "THEOS=$THEOS"
 
           test -d "$THEOS"
-          test -d "$THEOS/sdks"
-          test -d "$THEOS/sdks/iPhoneOS16.5.sdk"
-          test -d "$THEOS/toolchain/linux/iphone"
+
+          test -d \
+            "$THEOS/sdks/iPhoneOS16.5.sdk"
+
+          test -d \
+            "$THEOS/toolchain/linux/iphone"
 
           echo
-          echo "===== SDK ====="
+          echo "SDK:"
 
-          ls -lah "$THEOS/sdks"
+          ls -lah \
+            "$THEOS/sdks"
 
           echo
-          echo "===== TOOLCHAIN ====="
+          echo "iPhoneOS16.5.sdk:"
 
-          ls -lah "$THEOS/toolchain/linux/iphone/bin"
+          ls -lah \
+            "$THEOS/sdks/iPhoneOS16.5.sdk" \
+            | head -50
+
+          echo
+          echo "Toolchain:"
+
+          ls -lah \
+            "$THEOS/toolchain/linux/iphone/bin"
+
+
+      # ==========================================
+      # VERIFY PROJECT
+      # ==========================================
 
       - name: Verify Project Files
         run: |
           set -e
 
-          echo "===== PROJECT ====="
+          echo
+          echo "=========================================="
+          echo "PROJECT"
+          echo "=========================================="
 
           pwd
+
+          echo
+          echo "Files:"
+
           ls -lah
 
           echo
-          echo "===== Makefile ====="
+          echo "=========================================="
+          echo "MAKEFILE"
+          echo "=========================================="
 
           test -f Makefile
+
           cat Makefile
 
           echo
-          echo "===== Tweak.x ====="
+          echo "=========================================="
+          echo "TWEAK.X"
+          echo "=========================================="
 
           test -f Tweak.x
-          sed -n '1,240p' Tweak.x
+
+          sed -n '1,260p' Tweak.x
 
           echo
-          echo "===== Pixel1Photos.plist ====="
+          echo "=========================================="
+          echo "PLIST"
+          echo "=========================================="
 
           test -f Pixel1Photos.plist
+
           cat Pixel1Photos.plist
+
+
+      # ==========================================
+      # BUILD
+      # ==========================================
 
       - name: Build dylib
         run: |
           set -e
 
-          echo "===== BUILD ====="
+          echo
+          echo "=========================================="
+          echo "BUILD PIXEL1PHOTOS"
+          echo "=========================================="
+
           echo "THEOS=$THEOS"
 
           make clean || true
@@ -198,16 +305,29 @@ jobs:
             FINALPACKAGE=1 \
             THEOS="$THEOS"
 
+
+      # ==========================================
+      # FIND DYLIB
+      # ==========================================
+
       - name: Find dylib
         run: |
           set -e
 
-          echo "===== DYLIB SEARCH ====="
+          echo
+          echo "=========================================="
+          echo "SEARCH DYLIB"
+          echo "=========================================="
 
           find .theos \
             -type f \
             -name "*.dylib" \
             -print
+
+
+      # ==========================================
+      # PREPARE TROLLFOOLS
+      # ==========================================
 
       - name: Prepare TrollFools Files
         run: |
@@ -221,11 +341,23 @@ jobs:
             | head -n 1)
 
           if [ -z "$DYLIB" ]; then
-            echo "ERROR: Pixel1Photos.dylib not found"
+            echo
+            echo "ERROR: Pixel1Photos.dylib NOT FOUND"
+            echo
+
+            find .theos \
+              -type f \
+              -name "*.dylib" \
+              -print
+
             exit 1
           fi
 
-          echo "Found:"
+          echo
+          echo "=========================================="
+          echo "FOUND DYLIB"
+          echo "=========================================="
+
           echo "$DYLIB"
 
           cp "$DYLIB" \
@@ -234,31 +366,102 @@ jobs:
           cp Pixel1Photos.plist \
             output/Pixel1Photos.plist
 
+          echo
+          echo "=========================================="
+          echo "TROLLFOOLS OUTPUT"
+          echo "=========================================="
+
+          ls -lah output/
+
+
+      # ==========================================
+      # VERIFY OUTPUT
+      # ==========================================
+
       - name: Verify Output
         run: |
           set -e
 
-          echo "===== OUTPUT ====="
+          echo
+          echo "=========================================="
+          echo "OUTPUT"
+          echo "=========================================="
 
           ls -lah output/
 
           echo
-          echo "===== FILE ====="
+          echo "=========================================="
+          echo "DYLIB FILE"
+          echo "=========================================="
 
           file output/Pixel1Photos.dylib
 
           echo
-          echo "===== MACH-O ====="
+          echo "=========================================="
+          echo "DYLIB SIZE"
+          echo "=========================================="
 
-          llvm-objdump -p \
-            output/Pixel1Photos.dylib \
-            | head -100
+          stat \
+            -c "%n %s bytes" \
+            output/Pixel1Photos.dylib
 
           echo
-          echo "===== ARCHITECTURE ====="
+          echo "=========================================="
+          echo "MACH-O MAGIC"
+          echo "=========================================="
 
-          llvm-objdump -f \
+          xxd \
+            -l 32 \
             output/Pixel1Photos.dylib
+
+          echo
+          echo "=========================================="
+          echo "THEOS LLVM OBJDUMP"
+          echo "=========================================="
+
+          if [ -x \
+            "$THEOS/toolchain/linux/iphone/bin/llvm-objdump" \
+          ]; then
+
+            "$THEOS/toolchain/linux/iphone/bin/llvm-objdump" \
+              -private-headers \
+              output/Pixel1Photos.dylib \
+              | head -100 || true
+
+          else
+
+            echo "Theos llvm-objdump not found."
+            echo "Skipping Mach-O header inspection."
+
+          fi
+
+
+      # ==========================================
+      # FINAL CHECK
+      # ==========================================
+
+      - name: Final Check
+        run: |
+          set -e
+
+          echo
+          echo "=========================================="
+          echo "FINAL TROLLFOOLS PACKAGE"
+          echo "=========================================="
+
+          test -f output/Pixel1Photos.dylib
+          test -f output/Pixel1Photos.plist
+
+          echo
+          echo "SUCCESS"
+          echo
+
+          ls -lah output/
+
+
+      # ==========================================
+      # ARTIFACT
+      # ==========================================
 
       - name: Upload TrollFools Files
         uses: actions/upload-artifact@v4
