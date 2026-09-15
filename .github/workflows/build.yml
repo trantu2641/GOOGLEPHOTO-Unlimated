@@ -1,0 +1,62 @@
+name: Build Pixel1Photos RootHide
+
+on:
+  push:
+    branches:
+      - main
+
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y \
+            clang \
+            make \
+            perl \
+            git \
+            wget \
+            xz-utils \
+            ldid \
+            dpkg
+
+      - name: Install Theos
+        run: |
+          git clone --recursive \
+            https://github.com/theos/theos.git \
+            $HOME/theos
+
+      - name: Install SDK
+        run: |
+          mkdir -p $HOME/theos/sdks
+
+          wget -q \
+            https://github.com/theos/sdks/releases/download/16.5/iPhoneOS16.5.sdk.tar.xz \
+            -O /tmp/sdk.tar.xz
+
+          tar -xf /tmp/sdk.tar.xz \
+            -C $HOME/theos/sdks
+
+      - name: Build
+        env:
+          THEOS: ${{ github.workspace }}/../theos
+        run: |
+          make package FINALPACKAGE=1
+
+      - name: List packages
+        run: |
+          find packages -type f -maxdepth 1 -print
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Pixel1PhotosRootHide
+          path: packages/*.deb
