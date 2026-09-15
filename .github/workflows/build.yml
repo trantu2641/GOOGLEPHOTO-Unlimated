@@ -15,17 +15,8 @@ jobs:
 
     steps:
 
-      # ==========================================
-      # CHECKOUT
-      # ==========================================
-
       - name: Checkout
         uses: actions/checkout@v4
-
-
-      # ==========================================
-      # DEPENDENCIES
-      # ==========================================
 
       - name: Install dependencies
         run: |
@@ -48,11 +39,6 @@ jobs:
             libtinfo6 \
             file
 
-
-      # ==========================================
-      # INSTALL THEOS
-      # ==========================================
-
       - name: Install Theos
         run: |
           set -e
@@ -63,32 +49,15 @@ jobs:
             https://github.com/theos/theos.git \
             "$THEOS"
 
-          echo
-          echo "=========================================="
-          echo "THEOS INSTALLED"
-          echo "=========================================="
-
           echo "THEOS=$THEOS"
 
           test -d "$THEOS"
-
-          ls -lah "$THEOS"
-
-
-      # ==========================================
-      # INSTALL IOS TOOLCHAIN
-      # ==========================================
 
       - name: Install iOS Linux Toolchain
         run: |
           set -e
 
           mkdir -p "$THEOS/toolchain"
-
-          echo
-          echo "=========================================="
-          echo "DOWNLOAD IOS TOOLCHAIN"
-          echo "=========================================="
 
           curl -L \
             --fail \
@@ -97,66 +66,27 @@ jobs:
             "https://github.com/L1ghtmann/llvm-project/releases/latest/download/iOSToolchain-x86_64.tar.xz" \
             -o /tmp/iOSToolchain-x86_64.tar.xz
 
-          echo
-          echo "=========================================="
-          echo "EXTRACT IOS TOOLCHAIN"
-          echo "=========================================="
-
           tar -xJf \
             /tmp/iOSToolchain-x86_64.tar.xz \
             -C "$THEOS/toolchain"
 
-          echo
-          echo "=========================================="
-          echo "TOOLCHAIN CONTENT"
-          echo "=========================================="
-
-          find "$THEOS/toolchain" \
-            -maxdepth 5 \
-            -type f \
-            | head -150
-
-
-      # ==========================================
-      # VERIFY TOOLCHAIN
-      # ==========================================
+          echo "Toolchain installed."
 
       - name: Verify Toolchain
         run: |
           set -e
 
-          echo
-          echo "=========================================="
-          echo "VERIFY TOOLCHAIN"
-          echo "=========================================="
-
           CLANG="$THEOS/toolchain/linux/iphone/bin/clang"
 
           test -x "$CLANG"
 
-          echo
-          echo "CLANG:"
           "$CLANG" --version
-
-          echo
-          echo "TOOLCHAIN:"
-          ls -lah "$THEOS/toolchain/linux/iphone/bin"
-
-
-      # ==========================================
-      # INSTALL IOS SDK
-      # ==========================================
 
       - name: Download iOS 16.5 SDK
         run: |
           set -e
 
           mkdir -p "$THEOS/sdks"
-
-          echo
-          echo "=========================================="
-          echo "DOWNLOAD IPHONEOS 16.5 SDK"
-          echo "=========================================="
 
           curl -L \
             --fail \
@@ -165,11 +95,6 @@ jobs:
             "https://github.com/theos/sdks/releases/download/master-146e41f/iPhoneOS16.5.sdk.tar.xz" \
             -o /tmp/iPhoneOS16.5.sdk.tar.xz
 
-          echo
-          echo "=========================================="
-          echo "EXTRACT SDK"
-          echo "=========================================="
-
           tar -xJf \
             /tmp/iPhoneOS16.5.sdk.tar.xz \
             -C "$THEOS/sdks"
@@ -177,95 +102,37 @@ jobs:
           test -d \
             "$THEOS/sdks/iPhoneOS16.5.sdk"
 
-          echo
-          echo "SDK:"
-          ls -lah "$THEOS/sdks"
+          echo "SDK installed."
 
-
-      # ==========================================
-      # VERIFY THEOS
-      # ==========================================
-
-      - name: Verify Theos
+      - name: Verify Project
         run: |
           set -e
 
-          echo
-          echo "=========================================="
-          echo "VERIFY THEOS"
-          echo "=========================================="
-
-          test -d "$THEOS"
-
-          test -d \
-            "$THEOS/sdks/iPhoneOS16.5.sdk"
-
-          test -d \
-            "$THEOS/toolchain/linux/iphone"
-
-          echo
-          echo "THEOS:"
-          echo "$THEOS"
-
-          echo
-          echo "SDK:"
-          ls -lah "$THEOS/sdks"
-
-          echo
-          echo "TOOLCHAIN:"
-          ls -lah "$THEOS/toolchain/linux/iphone/bin"
-
-
-      # ==========================================
-      # VERIFY PROJECT
-      # ==========================================
-
-      - name: Verify Project Files
-        run: |
-          set -e
-
-          echo
           echo "=========================================="
           echo "PROJECT"
           echo "=========================================="
 
           pwd
 
-          echo
-          echo "FILES:"
           ls -lah
 
           echo
-          echo "=========================================="
-          echo "MAKEFILE"
-          echo "=========================================="
+          echo "===== MAKEFILE ====="
 
           test -f Makefile
-
           cat Makefile
 
           echo
-          echo "=========================================="
-          echo "TWEAK.X"
-          echo "=========================================="
+          echo "===== TWEAK.X ====="
 
           test -f Tweak.x
-
           sed -n '1,260p' Tweak.x
 
           echo
-          echo "=========================================="
-          echo "PLIST"
-          echo "=========================================="
+          echo "===== PLIST ====="
 
           test -f Pixel1Photos.plist
-
           cat Pixel1Photos.plist
-
-
-      # ==========================================
-      # CLEAN
-      # ==========================================
 
       - name: Clean
         run: |
@@ -275,25 +142,17 @@ jobs:
 
           rm -rf .theos
 
-          mkdir -p .theos
-
-
-      # ==========================================
-      # BUILD
-      # ==========================================
-
       - name: Build Pixel1Photos
         run: |
           set -e
 
-          echo
           echo "=========================================="
           echo "BUILD PIXEL1PHOTOS"
           echo "=========================================="
 
-          echo "THEOS=$THEOS"
-
           make
+
+          test -f Pixel1Photos.dylib
 
           echo
           echo "BUILD RESULT:"
@@ -303,18 +162,12 @@ jobs:
           echo "FILE TYPE:"
           file Pixel1Photos.dylib
 
-
-      # ==========================================
-      # MACH-O INSPECTION
-      # ==========================================
-
       - name: Inspect Mach-O
         run: |
           set -e
 
           DYLIB="Pixel1Photos.dylib"
 
-          echo
           echo "=========================================="
           echo "MACH-O INSPECTION"
           echo "=========================================="
@@ -337,26 +190,9 @@ jobs:
             -N32 \
             "$DYLIB"
 
-          echo
-          echo "FIRST 32 BYTES:"
-          xxd \
-            -l 32 \
-            "$DYLIB" \
-            || true
-
-
-      # ==========================================
-      # FIND LDID
-      # ==========================================
-
       - name: Locate ldid
         run: |
           set -e
-
-          echo
-          echo "=========================================="
-          echo "LOCATE LDID"
-          echo "=========================================="
 
           LDID="$THEOS/toolchain/linux/iphone/bin/ldid"
 
@@ -369,47 +205,27 @@ jobs:
           fi
 
           if [ -z "$LDID" ] || [ ! -x "$LDID" ]; then
-            echo
-            echo "ERROR: ldid NOT FOUND"
+            echo "ERROR: ldid not found."
             exit 1
           fi
 
-          echo
-          echo "LDID:"
-          echo "$LDID"
+          echo "LDID=$LDID"
 
           printf '%s\n' "$LDID" > /tmp/ldid_path
 
-
-      # ==========================================
-      # SIGN DYLIB
-      # ==========================================
-
-      - name: Sign dylib with ldid
+      - name: Sign dylib
         run: |
           set -e
 
-          DYLIB="Pixel1Photos.dylib"
           LDID=$(cat /tmp/ldid_path)
 
-          echo
           echo "=========================================="
           echo "SIGN DYLIB"
           echo "=========================================="
 
-          echo
-          echo "Using:"
-          echo "$LDID"
-
-          echo
-          echo "Creating working copy..."
-
           cp \
-            "$DYLIB" \
+            Pixel1Photos.dylib \
             /tmp/Pixel1Photos-signed.dylib
-
-          echo
-          echo "Pseudo-signing..."
 
           "$LDID" \
             -S \
@@ -418,19 +234,14 @@ jobs:
           echo
           echo "SIGNING SUCCESS"
 
-
-      # ==========================================
-      # VERIFY SIGNATURE
-      # ==========================================
-
       - name: Verify signed dylib
         run: |
           set -e
 
           LDID=$(cat /tmp/ldid_path)
+
           DYLIB="/tmp/Pixel1Photos-signed.dylib"
 
-          echo
           echo "=========================================="
           echo "VERIFY SIGNED DYLIB"
           echo "=========================================="
@@ -443,31 +254,16 @@ jobs:
             "$DYLIB"
 
           echo
-          echo "ENTITLEMENTS:"
-
-          "$LDID" \
-            -e \
-            "$DYLIB" \
-            || true
-
-          echo
           echo "FILE:"
 
           file "$DYLIB"
 
-
-      # ==========================================
-      # PREPARE TROLLFOOLS
-      # ==========================================
+          echo
+          echo "SIGNED DYLIB VERIFIED"
 
       - name: Prepare TrollFools
         run: |
           set -e
-
-          echo
-          echo "=========================================="
-          echo "PREPARE TROLLFOOLS"
-          echo "=========================================="
 
           mkdir -p output
 
@@ -480,49 +276,29 @@ jobs:
             output/Pixel1Photos.plist
 
           echo
-          echo "OUTPUT:"
+          echo "=========================================="
+          echo "TROLLFOOLS OUTPUT"
+          echo "=========================================="
+
           ls -lah output/
 
-
-      # ==========================================
-      # FINAL VERIFY
-      # ==========================================
-
-      - name: Final Verify
+      - name: Final Check
         run: |
           set -e
 
+          test -f output/Pixel1Photos.dylib
+          test -f output/Pixel1Photos.plist
+
           echo
           echo "=========================================="
-          echo "FINAL VERIFY"
+          echo "FINAL SUCCESS"
           echo "=========================================="
 
-          test -f \
-            output/Pixel1Photos.dylib
+          file output/Pixel1Photos.dylib
 
-          test -f \
-            output/Pixel1Photos.plist
-
-          echo
-          echo "DYLIB:"
-          file \
-            output/Pixel1Photos.dylib
-
-          echo
-          echo "SIZE:"
           stat \
             -c "%n %s bytes" \
             output/Pixel1Photos.dylib
-
-          echo
-          echo "=========================================="
-          echo "TROLLFOOLS PACKAGE READY"
-          echo "=========================================="
-
-
-      # ==========================================
-      # UPLOAD
-      # ==========================================
 
       - name: Upload TrollFools
         uses: actions/upload-artifact@v4
