@@ -1,12 +1,40 @@
-TARGET := iphone:clang:16.5:15.0
-ARCHS := arm64e
+THEOS ?= /home/runner/theos
 
-include $(THEOS)/makefiles/common.mk
+SDK := $(THEOS)/sdks/iPhoneOS16.5.sdk
+CLANG := $(THEOS)/toolchain/linux/iphone/bin/clang
+LDID := $(THEOS)/toolchain/linux/iphone/bin/ldid
 
-TWEAK_NAME := Pixel1Photos
+ARCH := arm64
+MIN_IOS := 15.0
 
-Pixel1Photos_FILES := Tweak.x
-Pixel1Photos_CFLAGS := -fobjc-arc
-Pixel1Photos_FRAMEWORKS := Foundation UIKit
+CFLAGS := \
+	-target arm64-apple-ios$(MIN_IOS) \
+	-isysroot $(SDK) \
+	-fobjc-arc \
+	-fblocks \
+	-O2 \
+	-Wall \
+	-Wextra
 
-include $(THEOS_MAKE_PATH)/tweak.mk
+LDFLAGS := \
+	-target arm64-apple-ios$(MIN_IOS) \
+	-isysroot $(SDK) \
+	-dynamiclib \
+	-framework Foundation \
+	-framework UIKit
+
+OUT := Pixel1Photos.dylib
+
+.PHONY: all clean
+
+all: $(OUT)
+
+$(OUT): Tweak.x
+	$(CLANG) $(CFLAGS) \
+	$(LDFLAGS) \
+	Tweak.x \
+	-o $(OUT)
+
+clean:
+	rm -f $(OUT)
+	rm -rf .theos
