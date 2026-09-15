@@ -31,7 +31,8 @@ jobs:
             xz-utils \
             bzip2 \
             unzip \
-            dpkg
+            dpkg \
+            libtinfo6
 
       - name: Install Theos
         run: |
@@ -41,26 +42,69 @@ jobs:
             https://github.com/theos/theos.git \
             "$HOME/theos"
 
-          echo "Theos installed:"
+          echo "===== THEOS ====="
           ls -lah "$HOME/theos"
 
-      - name: Install iOS toolchain
+      - name: Install iOS Linux Toolchain
         run: |
           set -e
 
-          cd "$HOME/theos"
+          THEOS="$HOME/theos"
 
-          echo "Installing Theos toolchain..."
+          mkdir -p "$THEOS/toolchain"
 
-          "$HOME/theos/bin/install-llvm-toolchain"
+          echo "===== DOWNLOAD TOOLCHAIN ====="
+
+          curl -L \
+            --fail \
+            --retry 3 \
+            --retry-delay 2 \
+            "https://github.com/L1ghtmann/llvm-project/releases/latest/download/iOSToolchain-x86_64.tar.xz" \
+            -o /tmp/iOSToolchain-x86_64.tar.xz
+
+          echo "===== EXTRACT TOOLCHAIN ====="
+
+          tar -xJf \
+            /tmp/iOSToolchain-x86_64.tar.xz \
+            -C "$THEOS/toolchain"
+
+          echo "===== TOOLCHAIN ====="
+
+          find "$THEOS/toolchain" \
+            -maxdepth 4 \
+            -type f \
+            | head -100
+
+      - name: Verify Toolchain
+        run: |
+          set -e
+
+          THEOS="$HOME/theos"
+
+          echo "===== TOOLCHAIN DIRECTORY ====="
+
+          find "$THEOS/toolchain" \
+            -maxdepth 4 \
+            -type f \
+            | head -100
+
+          echo
+          echo "===== CLANG ====="
+
+          test -x "$THEOS/toolchain/linux/iphone/bin/clang"
+
+          "$THEOS/toolchain/linux/iphone/bin/clang" \
+            --version
 
       - name: Download iOS 16.5 SDK
         run: |
           set -e
 
-          mkdir -p "$HOME/theos/sdks"
+          THEOS="$HOME/theos"
 
-          echo "Downloading iPhoneOS 16.5 SDK..."
+          mkdir -p "$THEOS/sdks"
+
+          echo "===== DOWNLOAD SDK ====="
 
           curl -L \
             --fail \
@@ -69,14 +113,16 @@ jobs:
             "https://github.com/theos/sdks/releases/download/master-146e41f/iPhoneOS16.5.sdk.tar.xz" \
             -o /tmp/iPhoneOS16.5.sdk.tar.xz
 
-          echo "Extracting SDK..."
+          echo "===== EXTRACT SDK ====="
 
           tar -xJf \
             /tmp/iPhoneOS16.5.sdk.tar.xz \
-            -C "$HOME/theos/sdks"
+            -C "$THEOS/sdks"
 
-          echo "Installed SDKs:"
-          ls -lah "$HOME/theos/sdks"
+          echo
+          echo "===== SDKs ====="
+
+          ls -lah "$THEOS/sdks"
 
       - name: Verify Theos
         env:
@@ -84,51 +130,42 @@ jobs:
         run: |
           set -e
 
-          echo "===== THEOS ====="
           echo "THEOS=$THEOS"
 
           test -d "$THEOS"
+          test -d "$THEOS/sdks"
+          test -d "$THEOS/toolchain/linux/iphone"
 
           echo
-          echo "===== THEOS DIRECTORY ====="
-          ls -lah "$THEOS"
+          echo "===== SDK ====="
 
-          echo
-          echo "===== SDKs ====="
           ls -lah "$THEOS/sdks"
 
           echo
           echo "===== TOOLCHAIN ====="
 
-          find "$THEOS/toolchain" \
-            -maxdepth 3 \
-            -type f \
-            | head -100
+          ls -lah "$THEOS/toolchain/linux/iphone/bin"
 
-      - name: Verify project files
+      - name: Verify Project
         run: |
           set -e
 
-          echo "===== PROJECT ====="
+          echo "===== PROJECT FILES ====="
 
           ls -lah
 
-          echo
-          echo "===== Tweak.x ====="
-
-          test -f Tweak.x
-          sed -n '1,240p' Tweak.x
-
-          echo
-          echo "===== Makefile ====="
-
           test -f Makefile
+          test -f Tweak.x
+          test -f Pixel1Photos.plist
+
+          echo
+          echo "===== MAKEFILE ====="
+
           cat Makefile
 
           echo
-          echo "===== Pixel1Photos.plist ====="
+          echo "===== PLIST ====="
 
-          test -f Pixel1Photos.plist
           cat Pixel1Photos.plist
 
       - name: Build dylib
@@ -172,7 +209,7 @@ jobs:
             exit 1
           fi
 
-          echo "Found:"
+          echo "Found dylib:"
           echo "$DYLIB"
 
           cp "$DYLIB" \
@@ -181,7 +218,7 @@ jobs:
           cp Pixel1Photos.plist \
             output/Pixel1Photos.plist
 
-      - name: Verify output
+      - name: Verify Mach-O
         run: |
           set -e
 
@@ -190,19 +227,19 @@ jobs:
           ls -lah output/
 
           echo
-          echo "===== DYLIB ====="
+          echo "===== FILE ====="
 
           file output/Pixel1Photos.dylib
 
           echo
-          echo "===== MACH-O HEADER ====="
+          echo "===== MACH-O ====="
 
           llvm-objdump -p \
             output/Pixel1Photos.dylib \
             | head -100
 
           echo
-          echo "===== ARCHITECTURE ====="
+          echo "===== ARCH ====="
 
           llvm-objdump -f \
             output/Pixel1Photos.dylib
