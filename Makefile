@@ -7,10 +7,15 @@ TWEAK_NAME := Pixel1Photos
 
 Pixel1Photos_FILES := Tweak.x
 
-Pixel1Photos_CFLAGS := -fobjc-arc
+Pixel1Photos_CFLAGS := \
+	-fobjc-arc
 
 Pixel1Photos_FRAMEWORKS := \
-    Foundation \
-    UIKit
+	Foundation \
+	UIKit
+
+# Force dynamic library output.
+Pixel1Photos_LDFLAGS += \
+	-dynamiclib
 
 include $(THEOS_MAKE_PATH)/tweak.mk
